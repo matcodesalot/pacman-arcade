@@ -232,6 +232,7 @@ for (let row = 0; row < map.length; row++) {
 
 
 window.addEventListener(`keydown`, (e) => {
+    e.preventDefault();
     switch(e.key) {
         case `ArrowUp`:
         case `w`:
