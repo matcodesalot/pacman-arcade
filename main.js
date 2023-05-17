@@ -2,6 +2,8 @@
 const canvas = document.getElementById(`canvas`);
 const ctx = canvas.getContext(`2d`);
 
+const scoreEl = document.getElementById(`scoreEl`);
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -39,8 +41,6 @@ const map = [
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
-
-let score = 0;
 
 function createRect(x, y, width, height, color) {
     ctx.fillStyle = color;
@@ -131,6 +131,7 @@ const keys = {
 }
 
 let lastKey = ``;
+let score = 0;
 
 const oneBlockSize = 40;
 const wallColor = `#1a1ac7`;
@@ -365,7 +366,10 @@ function gameLoop() {
         }
     }
 
-    foods.forEach((food, i) => {
+    //Iterate backwards through the array to avoid any rendering bugs
+    for(let i = foods.length - 1; 0 <= i; i--) {
+        const food = foods[i];
+
         food.draw();
 
         if(circleCollidesWithRectangle({
@@ -373,9 +377,10 @@ function gameLoop() {
             boundary: food
         })) {
             foods.splice(i, 1);
-            //console.log(score++);
+            score += 10;
+            scoreEl.innerHTML = score;
         }
-    });
+    }
 
     boundaries.forEach((boundary) => {
         boundary.draw();
