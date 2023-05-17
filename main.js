@@ -3,6 +3,7 @@ const canvas = document.getElementById(`canvas`);
 const ctx = canvas.getContext(`2d`);
 
 const scoreEl = document.getElementById(`scoreEl`);
+const audioBtn = document.getElementById(`audioBtn`);
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -132,6 +133,7 @@ const keys = {
 
 let lastKey = ``;
 let score = 0;
+let muted = false;
 
 const oneBlockSize = 40;
 const wallColor = `#1a1ac7`;
@@ -279,13 +281,21 @@ window.addEventListener(`keyup`, (e) => {
     }
 });
 
+audioBtn.addEventListener(`click`, () => {
+    muted = !muted;
+});
+
+function playAudio(filePath) {
+    let audio = new Audio(filePath);
+    audio.play();
+}
+
 function circleCollidesWithRectangle({player, boundary}) {
     return(player.position.y - player.radius + player.velocity.y <= boundary.position.y + boundary.height && 
         player.position.x + player.radius + player.velocity.x >= boundary.position.x && 
         player.position.y + player.radius + player.velocity.y >= boundary.position.y && 
         player.position.x - player.radius + player.velocity.x <= boundary.position.x + boundary.width);
 }
-
 
 
 //Main game loop
@@ -379,6 +389,9 @@ function gameLoop() {
             foods.splice(i, 1);
             score += 10;
             scoreEl.innerHTML = score;
+            if(!muted) {
+                playAudio(`assets/Sounds/FoodEat.wav`);
+            }
         }
     }
 
