@@ -424,7 +424,7 @@ function gameLoop() {
             score += 10;
             scoreEl.innerHTML = score;
             if(!muted) {
-                playAudio(`./assets/sounds/FoodEat.wav`);
+                playAudio(`./assets/sounds/foodeat.wav`);
             }
         }
     }
