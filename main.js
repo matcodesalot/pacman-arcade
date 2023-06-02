@@ -1,12 +1,9 @@
-//Define the canvas, getContext, and canvas dimensions
+//Define the canvas and getContext
 const canvas = document.getElementById(`canvas`);
 const ctx = canvas.getContext(`2d`);
 
 const scoreEl = document.getElementById(`scoreEl`);
 const audioBtn = document.getElementById(`audioBtn`);
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
 //Define the 3D map that represents the scene
 //1: boundary, 0: empty space, 2: player spawn point
@@ -43,6 +40,19 @@ const map = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
+const cellSize = 40; //Size of each cell in pixels
+const scalingFactor = 1; //Adjust this value to scale down the map
+
+const scaledCellSize = cellSize * scalingFactor;
+
+//Calculate the width and height of the scaled map
+const scaledMapWidth = map[0].length * scaledCellSize;
+const scaledMapHeight = map.length * scaledCellSize;
+
+//Set the canvas dimensions the scaled size of the map
+canvas.width = scaledMapWidth;
+canvas.height = scaledMapHeight;
+
 function createRect(x, y, width, height, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, width, height);
@@ -74,28 +84,38 @@ class Player {
     constructor({position, velocity}) {
         this.position = position || {x: 0, y: 0};
         this.velocity = velocity || {x: 0, y: 0};
-        this.radius = 15;
         this.speed = 3;
+
+        const sprite = new Image();
+        sprite.src = `./assets/sprites/pacman.png`;
+
+        sprite.onload = () => {
+            const scale = 0.9;
+            this.sprite = sprite;
+            this.width = sprite.width * scale;
+            this.height = sprite.height * scale;
+        }
     }
 
     draw() {
-        ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `yellow`;
-        ctx.fill();
-        ctx.closePath();
+        if(this.sprite) {
+            ctx.drawImage(this.sprite, this.position.x - this.width / 2, this.position.y - this.height / 2, this.width, this.height);
+            //createRectOutline(this.position.x - this.width / 2, this.position.y - this.height / 2, this.width, this.height, `red`);
+        }
     }
 
     update() {
-        this.draw();
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
+        if(this.sprite) {
+            this.draw();
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y;
 
-        if(this.position.x <= 0) {
-            console.log("we out this piece");
-        }
-        if(this.position.x >= canvas.width) {
-            console.log("we also out this piece");
+            if(this.position.x <= 0) {
+                this.position.x = canvas.width;
+            }
+            else if(this.position.x >= canvas.width) {
+                this.position.x = 0;
+            }
         }
     }
 }
@@ -290,11 +310,25 @@ function playAudio(filePath) {
     audio.play();
 }
 
-function circleCollidesWithRectangle({player, boundary}) {
-    return(player.position.y - player.radius + player.velocity.y <= boundary.position.y + boundary.height && 
-        player.position.x + player.radius + player.velocity.x >= boundary.position.x && 
-        player.position.y + player.radius + player.velocity.y >= boundary.position.y && 
-        player.position.x - player.radius + player.velocity.x <= boundary.position.x + boundary.width);
+function circleCollidesWithRectangle({circle, rect}) {
+    return(circle.position.y - circle.radius + circle.velocity.y <= rect.position.y + rect.height && 
+        circle.position.x + circle.radius + circle.velocity.x >= rect.position.x && 
+        circle.position.y + circle.radius + circle.velocity.y >= rect.position.y && 
+        circle.position.x - circle.radius + circle.velocity.x <= rect.position.x + rect.width);
+}
+
+function rectCollidesWithRect({rect1, rect2}) {
+    return (rect1.position.x + (rect1.width / 2) + rect1.velocity.x >= rect2.position.x && 
+        rect1.position.x - (rect1.width / 2) + rect1.velocity.x <= rect2.position.x + rect2.width && 
+        rect1.position.y + (rect1.height / 2) + rect1.velocity.y >= rect2.position.y && 
+        rect1.position.y - (rect1.height / 2) + rect1.velocity.y <= rect2.position.y + rect2.height);
+}
+
+function spriteCollidesWithRect({sprite, rect}) {
+    return (sprite.position.x + sprite.velocity.x < rect.x + rect.width &&
+        sprite.position.x + sprite.velocity.x + sprite.width > rectangle.x &&
+        sprite.position.y + sprite.velocity.y < rect.y + rect.height &&
+        sprite.position.y + sprite.velocity.y + sprite.height > rect.y);
 }
 
 
@@ -306,12 +340,12 @@ function gameLoop() {
     if(keys.up.pressed && lastKey === `up`) {
         for(let i = 0; i < boundaries.length; i++) {
             const boundary = boundaries[i];
-            if(circleCollidesWithRectangle({
-                player: {...player, velocity: {
+            if(rectCollidesWithRect({
+                rect1: {...player, velocity: {
                     x: 0,
                     y: -player.speed
                 }},
-                boundary: boundary
+                rect2: boundary
             })) {
                 player.velocity.y = 0;
                 break;
@@ -324,12 +358,12 @@ function gameLoop() {
     if(keys.down.pressed && lastKey === `down`) {
         for(let i = 0; i < boundaries.length; i++) {
             const boundary = boundaries[i];
-            if(circleCollidesWithRectangle({
-                player: {...player, velocity: {
+            if(rectCollidesWithRect({
+                rect1: {...player, velocity: {
                     x: 0,
                     y: player.speed
                 }},
-                boundary: boundary
+                rect2: boundary
             })) {
                 player.velocity.y = 0;
                 break;
@@ -342,12 +376,12 @@ function gameLoop() {
     if(keys.left.pressed && lastKey === `left`) {
         for(let i = 0; i < boundaries.length; i++) {
             const boundary = boundaries[i];
-            if(circleCollidesWithRectangle({
-                player: {...player, velocity: {
+            if(rectCollidesWithRect({
+                rect1: {...player, velocity: {
                     x: -player.speed,
                     y: 0
                 }},
-                boundary: boundary
+                rect2: boundary
             })) {
                 player.velocity.x = 0;
                 break;
@@ -360,12 +394,12 @@ function gameLoop() {
     if(keys.right.pressed && lastKey === `right`) {
         for(let i = 0; i < boundaries.length; i++) {
             const boundary = boundaries[i];
-            if(circleCollidesWithRectangle({
-                player: {...player, velocity: {
+            if(rectCollidesWithRect({
+                rect1: {...player, velocity: {
                     x: player.speed,
                     y: 0
                 }},
-                boundary: boundary
+                rect2: boundary
             })) {
                 player.velocity.x = 0;
                 break;
@@ -382,15 +416,15 @@ function gameLoop() {
 
         food.draw();
 
-        if(circleCollidesWithRectangle({
-            player: player,
-            boundary: food
+        if(rectCollidesWithRect({
+            rect1: player,
+            rect2: food
         })) {
             foods.splice(i, 1);
             score += 10;
             scoreEl.innerHTML = score;
             if(!muted) {
-                playAudio(`assets/Sounds/FoodEat.wav`);
+                playAudio(`./assets/sounds/FoodEat.wav`);
             }
         }
     }
@@ -398,9 +432,9 @@ function gameLoop() {
     boundaries.forEach((boundary) => {
         boundary.draw();
 
-        if(circleCollidesWithRectangle({
-            player: player,
-            boundary: boundary
+        if(rectCollidesWithRect({
+            rect1: player,
+            rect2: boundary
         })) {
             player.velocity.x = 0;
             player.velocity.y = 0;
